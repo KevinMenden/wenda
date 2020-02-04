@@ -9,6 +9,7 @@ import os
 import sys
 import pandas
 import numpy as np
+import pandas as pd
 import sklearn.linear_model as lm
 import feature_models
 import GPy
@@ -35,6 +36,7 @@ parser.add_argument("-o", "--out", help="Output directory", default=".")
 parser.add_argument("-a", "--alpha", help="Alpha value. Default: 0.8", default=0.8)
 parser.add_argument("--splits", help="Number of CV splits", default=10)
 parser.add_argument("-k", help="K value. Default: 3", default=3)
+parser.add_argument("--fit_features", default=True, type=bool, help="Whether feature models have to be fit [True | False]")
 
 # parse arguments
 args = parser.parse_args()
@@ -49,6 +51,7 @@ predict_path = args.out
 alpha = args.alpha
 n_splits = args.splits
 k_wnet = args.k
+fit_featres = args.fit_features
 
 
 # Load the data
@@ -87,8 +90,9 @@ model = models.Wenda(x_train=train.meth_matrix,
 
 
 # Fit feature models
-print("Fitting feature models ...")
-model.fitFeatureModels()
+if fit_featres:
+    print("Fitting feature models ...")
+    model.fitFeatureModels()
 
 # Collect confidences
 print("Collecting confidences ...")
@@ -97,11 +101,13 @@ model.collectConfidences()
 # Perform training and prediction
 print("Performing training and prediction")
 k_wnet = 3
-weight_func = lambda x: np.power(1-x, k_wnet, alpha=0.8)
-predictions = model.predictWithTrainingDataCV(weight_func=weight_funct,
+weight_func = lambda x: np.power(1-x, k_wnet)
+predictions = model.predictWithTrainingDataCV(weight_func=weight_func,
                                               grouping=grouping,
                                               predict_path=predict_path,
                                               alpha=0.8, 
                                               n_splits=10)
-
+print(predictions)
+df = pd.DataFrame(predictions)
+df.to_csv(os.path.join(predict_path, "predictions.csv"), sep="\t")
 print("Finished.")
